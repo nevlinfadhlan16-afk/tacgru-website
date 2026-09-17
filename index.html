@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TACGRU — Tactical Combat Application Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0a0c09;
+    --bg-1:#12150f;
+    --bg-2:#1a1e15;
+    --panel:#1e2318;
+    --olive:#5c6b3f;
+    --olive-light:#8a9a5f;
+    --rust:#a8481f;
+    --rust-light:#c96a3d;
+    --text:#eceae0;
+    --text-dim:#a7ab99;
+    --line:rgba(236,234,224,0.12);
+    --line-strong:rgba(236,234,224,0.22);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--black);
+    color:var(--text);
+    font-family:'Barlow', sans-serif;
+    font-weight:400;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  img,svg{display:block; max-width:100%;}
+  a{color:inherit; text-decoration:none;}
+  h1,h2,h3,h4{font-family:'Anton', sans-serif; font-weight:400; letter-spacing:0.5px; line-height:1.05;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .label{
+    font-family:'Barlow Condensed', sans-serif;
+    font-size:13px;
+    letter-spacing:3px;
+    color:var(--olive-light);
+    font-weight:600;
+  }
+  .rule{width:40px; height:3px; background:var(--rust); margin:10px 0 18px;}
+  section{position:relative;}
+  ::selection{background:var(--rust); color:#fff;}
+
+  /* ---------- texture helpers ---------- */
+  .grain{
+    position:absolute; inset:0; pointer-events:none; opacity:0.5; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  }
+  .topo{
+    position:absolute; inset:0; pointer-events:none; opacity:0.08;
+    background-image:repeating-radial-gradient(circle at 20% 30%, transparent 0, transparent 38px, var(--olive-light) 39px, transparent 40px);
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px;
+    background:linear-gradient(180deg, rgba(10,12,9,0.9), rgba(10,12,9,0));
+    transition:background .3s, padding .3s, border-color .3s;
+    border-bottom:1px solid transparent;
+  }
+  header.scrolled{
+    background:rgba(10,12,9,0.92);
+    backdrop-filter:blur(8px);
+    padding:12px 32px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand span{font-family:'Anton'; font-size:20px; letter-spacing:2px;}
+  nav.links{display:flex; gap:30px; align-items:center;}
+  nav.links a{
+    font-family:'Barlow Condensed'; font-size:14px; letter-spacing:1.5px; font-weight:600;
+    color:var(--text-dim); transition:color .2s;
+  }
+  nav.links a:hover{color:var(--text);}
+  .nav-cta{display:flex; gap:10px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'Barlow Condensed'; font-size:14px; letter-spacing:1.5px; font-weight:700;
+    padding:10px 18px; border:1px solid var(--line-strong);
+    transition:all .2s; white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--olive-light); background:rgba(138,154,95,0.08);}
+  .btn.solid{background:var(--rust); border-color:var(--rust); color:#fff;}
+  .btn.solid:hover{background:var(--rust-light); border-color:var(--rust-light);}
+  .burger{display:none; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none;}
+  .burger span{width:24px; height:2px; background:var(--text);}
+
+  /* ---------- hero ---------- */
+  .hero{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; position:relative; padding:140px 32px 80px;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(92,107,63,0.18), transparent 55%),
+      linear-gradient(180deg, var(--black) 0%, var(--bg-1) 60%, var(--bg-2) 100%);
+    overflow:hidden;
+  }
+  .hero-silhouette{
+    position:absolute; bottom:0; left:0; right:0; height:46%; opacity:0.9;
+  }
+  .hero-tag{
+    font-family:'Barlow Condensed'; font-size:12px; letter-spacing:3px; font-weight:600;
+    color:var(--olive-light); border:1px solid var(--line-strong); padding:8px 18px;
+    margin-bottom:28px; opacity:0; animation:rise .8s .1s forwards;
+  }
+  .hero h1{
+    font-size:clamp(64px, 13vw, 148px); letter-spacing:6px; color:var(--text);
+    opacity:0; animation:rise .9s .25s forwards;
+  }
+  .hero h1 span{color:var(--rust-light);}
+  .hero .sub{
+    font-family:'Barlow Condensed'; font-size:clamp(16px,2.4vw,22px); letter-spacing:2px;
+    color:var(--text-dim); margin-top:10px; text-transform:uppercase; font-weight:500;
+    opacity:0; animation:rise .9s .4s forwards;
+  }
+  .hero p{
+    max-width:640px; margin:24px auto 0; color:var(--text-dim); font-size:15px;
+    opacity:0; animation:rise .9s .55s forwards;
+  }
+  .hero-ctas{display:flex; gap:14px; margin-top:36px; flex-wrap:wrap; justify-content:center;
+    opacity:0; animation:rise .9s .7s forwards;}
+  @keyframes rise{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
+  .scroll-cue{
+    position:absolute; bottom:34px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    font-family:'Barlow Condensed'; font-size:12px; letter-spacing:3px; color:var(--text-dim);
+  }
+  .scroll-cue svg{animation:bob 1.8s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);} 50%{transform:translateY(8px);}}
+
+  /* ---------- generic split section ---------- */
+  .split{
+    display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;
+    padding:110px 0;
+  }
+  .split.reverse .art{order:2;}
+  .split.reverse .copy{order:1;}
+  .copy h2{font-size:clamp(30px,4vw,46px); margin:0 0 18px; letter-spacing:1px;}
+  .copy p{color:var(--text-dim); margin-bottom:16px; max-width:520px; font-size:15.5px;}
+  .copy h4{font-family:'Barlow Condensed'; font-size:15px; letter-spacing:2px; color:var(--olive-light); margin:26px 0 6px; font-weight:700;}
+
+  .art-panel{
+    aspect-ratio:4/5; position:relative; overflow:hidden; border:1px solid var(--line);
+    background:
+      radial-gradient(circle at 30% 20%, rgba(92,107,63,0.35), transparent 60%),
+      linear-gradient(160deg, #23281a, #0e100b 75%);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .art-panel.wide{aspect-ratio:16/10;}
+  .art-panel .icon{width:34%; opacity:0.85; stroke:var(--olive-light);}
+  .art-panel::after{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg, transparent 0 26px, rgba(236,234,224,0.03) 26px 27px);
+  }
+  .corner{position:absolute; width:22px; height:22px; border:2px solid var(--rust-light);}
+  .corner.tl{top:10px; left:10px; border-right:none; border-bottom:none;}
+  .corner.br{bottom:10px; right:10px; border-left:none; border-top:none;}
+
+  /* ---------- section band ---------- */
+  .band{
+    padding:110px 0;
+    background:linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .band-head{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:20px; margin-bottom:56px;}
+  .band-head h2{font-size:clamp(34px,5vw,56px);}
+
+  /* ---------- unit cards ---------- */
+  .cards-2{display:grid; grid-template-columns:1fr 1fr; gap:36px;}
+  .unit-card{border:1px solid var(--line); background:var(--panel); transition:border-color .25s, transform .25s;}
+  .unit-card:hover{border-color:var(--olive-light); transform:translateY(-4px);}
+  .unit-card .art-panel{aspect-ratio:16/10; border:none; border-bottom:1px solid var(--line);}
+  .unit-card .body{padding:26px 28px 30px;}
+  .unit-card .label{display:block; margin-bottom:6px;}
+  .unit-card h3{font-family:'Anton'; font-size:26px; margin-bottom:10px;}
+  .unit-card p{color:var(--text-dim); font-size:14.5px;}
+
+  /* ---------- specialties list ---------- */
+  .spec-list{display:flex; flex-direction:column; gap:26px;}
+  .spec-item{display:flex; gap:18px; padding-bottom:26px; border-bottom:1px solid var(--line);}
+  .spec-item:last-child{border-bottom:none; padding-bottom:0;}
+  .spec-icon{width:46px; height:46px; flex:none; border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center;}
+  .spec-icon svg{width:22px; height:22px; stroke:var(--rust-light); fill:none;}
+  .spec-item h4{font-family:'Anton'; font-size:18px; letter-spacing:0.5px; margin-bottom:6px; color:var(--text);}
+  .spec-item p{color:var(--text-dim); font-size:14.5px;}
+
+  /* ---------- ranger school ---------- */
+  .training-list{list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; margin:18px 0 8px;}
+  .training-list li{
+    font-family:'Barlow Condensed'; font-size:15px; letter-spacing:0.5px; color:var(--text);
+    padding:9px 0 9px 18px; border-bottom:1px solid var(--line); position:relative;
+  }
+  .training-list li::before{content:''; position:absolute; left:0; top:16px; width:8px; height:2px; background:var(--rust-light);}
+  .gallery-stack{display:flex; flex-direction:column; gap:18px;}
+  .gallery-stack .art-panel{aspect-ratio:16/9;}
+
+  /* ---------- JSOC grid ---------- */
+  .jsoc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+  .jsoc-card{border:1px solid var(--line); background:var(--panel);}
+  .jsoc-card .art-panel{aspect-ratio:1/1; border:none; border-bottom:1px solid var(--line);}
+  .jsoc-card .body{padding:18px 18px 22px;}
+  .jsoc-card h4{font-family:'Anton'; font-size:16.5px; margin-bottom:4px;}
+  .jsoc-card .tag{font-family:'Barlow Condensed'; font-size:12px; letter-spacing:1.5px; color:var(--olive-light); font-weight:600;}
+
+  /* ---------- SERE ---------- */
+  .qual-list{list-style:none; margin:18px 0 0; display:flex; flex-direction:column; gap:8px;}
+  .qual-list li{font-size:14.5px; color:var(--text-dim); padding-left:16px; position:relative;}
+  .qual-list li::before{content:'—'; position:absolute; left:0; color:var(--rust-light);}
+
+  /* ---------- deployment ---------- */
+  .deploy-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:28px;}
+  .deploy-card .art-panel{aspect-ratio:4/5;}
+  .deploy-card .yr{font-family:'Barlow Condensed'; font-size:13px; letter-spacing:2px; color:var(--rust-light); font-weight:700; margin-top:16px;}
+  .deploy-card h4{font-family:'Anton'; font-size:20px; margin-top:4px;}
+
+  /* ---------- mentor ---------- */
+  .mentor{
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:60px; align-items:center; padding:110px 0;
+  }
+  .mentor .role{font-family:'Barlow Condensed'; font-size:14px; letter-spacing:2px; color:var(--olive-light); font-weight:700; margin-bottom:6px;}
+  .mentor h2{font-size:clamp(28px,4vw,42px); margin-bottom:18px;}
+  .mentor p{color:var(--text-dim); margin-bottom:14px; max-width:520px; font-size:15px;}
+  .mentor-ctas{display:flex; gap:12px; margin-top:26px; flex-wrap:wrap;}
+
+  /* ---------- partners ---------- */
+  .partners{padding:100px 0 120px; text-align:center;}
+  .partner-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:40px; margin-top:50px;}
+  .partner-item{display:flex; flex-direction:column; align-items:center; gap:16px;}
+  .partner-mark{
+    width:84px; height:84px; border:1px solid var(--line-strong); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:var(--olive-light);
+  }
+  .partner-item span{font-family:'Barlow Condensed'; font-size:13px; letter-spacing:1.5px; color:var(--text-dim);}
+
+  /* ---------- footer ---------- */
+  footer{
+    padding:60px 0 40px; border-top:1px solid var(--line); background:var(--black);
+  }
+  .foot-top{display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:30px; padding-bottom:36px; margin-bottom:26px; border-bottom:1px solid var(--line);}
+  .foot-top p{color:var(--text-dim); max-width:360px; font-size:14px; margin-top:10px;}
+  .foot-links{display:flex; gap:14px;}
+  .foot-bottom{display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-family:'Barlow Condensed'; font-size:13px; letter-spacing:1px; color:var(--text-dim);}
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px){
+    nav.links{display:none;}
+    .burger{display:flex;}
+    .split, .mentor{grid-template-columns:1fr; gap:40px;}
+    .split.reverse .art{order:1;}
+    .split.reverse .copy{order:2;}
+    .cards-2{grid-template-columns:1fr;}
+    .jsoc-grid{grid-template-columns:repeat(2,1fr);}
+    .deploy-grid{grid-template-columns:1fr;}
+    .partner-grid{grid-template-columns:1fr; gap:30px;}
+    .training-list{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header id="siteHeader">
+  <a href="#top" class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="#a8481f" stroke-width="1.4">
+      <path d="M15 2 L27 7 V15 C27 22 21 27 15 28 C9 27 3 22 3 15 V7 Z"/>
+      <path d="M15 9 L15 20 M10 13 L20 13" stroke="#8a9a5f"/>
+    </svg>
+    <span>TACGRU</span>
+  </a>
+  <nav class="links">
+    <a href="#units">Active Unit</a>
+    <a href="#specialties">Specialties</a>
+    <a href="#school">Ranger School</a>
+    <a href="#jsoc">JSOC</a>
+    <a href="#mentor">Mentor</a>
+    <a href="#partners">Partners</a>
+  </nav>
+  <div class="nav-cta">
+    <a class="btn solid" href="https://discord.gg/FVXKHNH2b" target="_blank" rel="noopener">Join Discord</a>
+  </div>
+  <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero" id="top">
+  <div class="topo"></div>
+  <div class="hero-tag">ONE OF THE BIGGEST COMMUNITY IN INDONESIA</div>
+  <h1>TACGRU</h1>
+  <div class="sub">Tactical Combat Application Group</div>
+  <p>A Tier 1 &amp; Tier 2‑inspired U.S. Special Operations Forces milsim community. TACGRU brings the structure, discipline, and operational mindset of modern U.S. Special Operations Forces to an immersive PvE milsim environment within Arma Reforger.</p>
+  <div class="hero-ctas">
+    <a class="btn solid" href="https://discord.gg/FVXKHNH2b" target="_blank" rel="noopener">Join our Discord</a>
+    <a class="btn" href="https://www.youtube.com/@Station1023" target="_blank" rel="noopener">Watch on YouTube</a>
+  </div>
+  <svg class="hero-silhouette" viewBox="0 0 1200 260" preserveAspectRatio="none">
+    <rect width="1200" height="260" fill="url(#g1)"/>
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#12150f" stop-opacity="0"/>
+        <stop offset="1" stop-color="#0a0c09" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+    <g fill="#0a0c09">
+      <path d="M0 260 L0 190 L40 150 L60 190 L70 140 L90 190 L120 160 L150 200 L190 150 L220 195 L260 130 L300 195 L340 170 L380 200 L420 150 L460 195 L500 160 L540 200 L580 140 L620 195 L660 170 L700 200 L740 150 L780 195 L820 160 L860 200 L900 140 L940 195 L980 170 L1020 200 L1060 150 L1100 195 L1140 165 L1180 200 L1200 190 L1200 260 Z"/>
+    </g>
+  </svg>
+  <a href="#bio" class="scroll-cue">
+    <span>SEE MORE</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a7ab99" stroke-width="1.6"><path d="M12 4v16M6 14l6 6 6-6"/></svg>
+  </a>
+</section>
+
+<!-- ================= BIO ================= -->
+<section class="wrap split" id="bio">
+  <div class="art">
+    <div class="art-panel">
+      <div class="corner tl"></div><div class="corner br"></div>
+      <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2">
+        <circle cx="32" cy="16" r="7"/>
+        <path d="M18 52 L20 34 L14 30 L20 20 L44 20 L50 30 L44 34 L46 52 Z"/>
+        <path d="M22 20 L18 12 M42 20 L46 12"/>
+      </svg>
+    </div>
+  </div>
+  <div class="copy">
+    <span class="label">BIO</span>
+    <div class="rule"></div>
+    <p>TACGRU Tactical Combat Application Group is an Indonesian‑based Arma Reforger milsim community inspired by the structure, doctrine, and operational mindset of U.S. Special Operations Forces. Built around Tier 1 and Tier 2 concepts, TACGRU brings together specialized ground elements, aviation, reconnaissance, and joint capabilities to create immersive and challenging PvE operations. Our focus is simple: realistic teamwork, disciplined execution, and an experience that goes beyond the ordinary battlefield.</p>
+    <h4>OUR APPROACH</h4>
+    <p>Every operation begins with a plan, but success depends on the team behind it. TACGRU emphasizes communication, preparation, coordination, and adaptability. From Ranger‑style direct action to special mission operations and aviation support, every element operates as part of a larger task force.</p>
+  </div>
+</section>
+
+<!-- ================= ACTIVE UNIT ================= -->
+<section class="band" id="units">
+  <div class="wrap">
+    <div class="band-head">
+      <div>
+        <span class="label">WHO WE ARE</span>
+        <h2>ACTIVE UNIT</h2>
+      </div>
+    </div>
+    <div class="cards-2">
+      <article class="unit-card">
+        <div class="art-panel">
+          <div class="corner tl"></div><div class="corner br"></div>
+          <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2">
+            <path d="M8 46 L20 30 L30 38 L44 18 L56 30" />
+            <circle cx="44" cy="18" r="4"/>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="label">75TH RANGER REGIMENT</span>
+          <h3>Large Scale Unit QRF</h3>
+          <p>Built for rapid response, airfield seizure, direct action, and large‑scale assault operations. The Ranger element serves as TACGRU's primary Tier 2‑inspired assault force. RANGERS LEAD THE WAY.</p>
+        </div>
+      </article>
+      <article class="unit-card">
+        <div class="art-panel">
+          <div class="corner tl"></div><div class="corner br"></div>
+          <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2">
+            <path d="M10 40 L54 40 M32 40 L32 14 L46 22 Z"/>
+            <circle cx="32" cy="10" r="3"/>
+          </svg>
+        </div>
+        <div class="body">
+          <span class="label">JSOC</span>
+          <h3>Joint Special Operation Command</h3>
+          <p>A joint special operations element designed for high‑risk missions, special reconnaissance, direct action, and high‑value target operations. PRECISION. SPEED. SILENCE.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SPECIALTIES ================= -->
+<section class="wrap split" id="specialties">
+  <div class="copy">
+    <span class="label">ROLES</span>
+    <h2>RANGER SPECIALTIES</h2>
+    <div class="rule"></div>
+    <div class="spec-list">
+      <div class="spec-item">
+        <div class="spec-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="6"/><path d="M12 8V4M9 4h6M18 6l2-2"/></svg></div>
+        <div>
+          <h4>EOD Specialist</h4>
+          <p>Explosive Ordnance Disposal — trained to identify, neutralize, and safely handle threats during combat operations.</p>
+        </div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-icon"><svg viewBox="0 0 24 24"><path d="M4 20 L12 4 L20 20 M8 14h8"/></svg></div>
+        <div>
+          <h4>Fire Team Leader</h4>
+          <p>Leads fire‑team elements, coordinates movement and engagement, and maintains tactical control under pressure.</p>
+        </div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+        <div>
+          <h4>Marksman</h4>
+          <p>Precision engagement — provides accurate long‑range fire and target observation while supporting the assault element.</p>
+        </div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-icon"><svg viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"/></svg></div>
+        <div>
+          <h4>Elite QRF</h4>
+          <p>Rapid response &amp; assault — a highly responsive element tasked with rapid deployment, reinforcement, and immediate action.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="art">
+    <div class="art-panel">
+      <div class="corner tl"></div><div class="corner br"></div>
+      <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2">
+        <path d="M12 52 L52 12 M12 52 L20 52 L20 44 M52 12 L52 20 L44 20"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RANGER SCHOOL ================= -->
+<section class="band" id="school">
+  <div class="wrap split">
+    <div class="copy" style="max-width:none;">
+      <span class="label">TRAIN THE FUNDAMENTALS</span>
+      <h2>RANGER SCHOOL</h2>
+      <div class="rule"></div>
+      <p>Earn your place. Master the basics. Lead the mission. Ranger School is TACGRU's structured training program designed to develop disciplined and capable operators through detailed, instructor‑led training within Arma Reforger. From basic combat fundamentals to small‑unit tactics, candidates are introduced to the skills required to operate effectively within a Ranger element.</p>
+      <h4>TRAINING INCLUDES</h4>
+      <ul class="training-list">
+        <li>Basic Combat Training</li>
+        <li>Weapons &amp; Marksmanship</li>
+        <li>Movement &amp; Formations</li>
+        <li>Fire Team Tactics</li>
+        <li>Communication &amp; Radio Procedure</li>
+        <li>Land Navigation</li>
+        <li>Combat Medical Fundamentals</li>
+        <li>Tactical Decision Making</li>
+        <li>Team Leadership</li>
+        <li>PvE Field Exercises</li>
+      </ul>
+      <h4>FROM RECRUIT TO RANGER</h4>
+      <p>Every operator starts somewhere. Ranger School provides a structured path for new players to understand TACGRU's standards, learn the fundamentals of Arma Reforger milsim, and become an effective member of the team.</p>
+    </div>
+    <div class="gallery-stack">
+      <div class="art-panel wide">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M6 40 L58 40 M14 40 L14 24 L50 24 L50 40 M22 24 L22 14 L42 14 L42 24"/></svg>
+      </div>
+      <div class="art-panel wide">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><circle cx="32" cy="24" r="14"/><path d="M14 54 C14 42 22 36 32 36 C42 36 50 42 50 54"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= JSOC ================= -->
+<section class="wrap" id="jsoc" style="padding:110px 0;">
+  <div class="band-head">
+    <div>
+      <span class="label">TASK FORCE ELEMENTS</span>
+      <h2>JSOC</h2>
+    </div>
+  </div>
+  <div class="jsoc-grid">
+    <article class="jsoc-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M6 44 L58 20 M20 30 L32 44 L58 20"/></svg></div>
+      <div class="body">
+        <h4>160th SOAR</h4>
+        <span class="tag">COMBAT AVIATION</span>
+      </div>
+    </article>
+    <article class="jsoc-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M32 6 L52 16 V32 C52 44 42 52 32 56 C22 52 12 44 12 32 V16 Z"/></svg></div>
+      <div class="body">
+        <h4>Air Force 24th STS</h4>
+        <span class="tag">FIGHTER JET, PARARESCUE, CCT, SR</span>
+      </div>
+    </article>
+    <article class="jsoc-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M12 44 C12 26 20 12 32 12 C44 12 52 26 52 44"/><path d="M12 44 L52 44"/></svg></div>
+      <div class="body">
+        <h4>SEAL Team 6</h4>
+        <span class="tag">MARITIME SPECIALIST</span>
+      </div>
+    </article>
+    <article class="jsoc-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M32 8 L56 20 L32 32 L8 20 Z M8 20 V44 L32 56 L56 44 V20"/></svg></div>
+      <div class="body">
+        <h4>1st SFOD‑D</h4>
+        <span class="tag">TASK FORCE GREEN</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ================= SERE ================= -->
+<section class="band">
+  <div class="wrap split reverse">
+    <div class="art">
+      <div class="art-panel">
+        <div class="corner tl"></div><div class="corner br"></div>
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M32 6 L32 58 M14 20 L50 20 M18 38 L46 38"/></svg>
+      </div>
+    </div>
+    <div class="copy">
+      <span class="label">SURVIVAL · EVASION · RESISTANCE · ESCAPE</span>
+      <h2>SERE QUALIFICATION</h2>
+      <div class="rule"></div>
+      <p>Earn the right to operate. SERE Qualification is a specialized training and assessment program designed for operators working into the JSOC element. Candidates are challenged through simulated SERE curriculum focused on survival, evasion, resistance, and escape — conducted under adverse conditions.</p>
+      <p>The program is developed and delivered under the guidance of an experienced real‑world SERE instructor, ensuring realistic knowledge and training methodology within the TACGRU roleplay environment.</p>
+      <h4>FROM CANDIDATE TO OPERATOR</h4>
+      <p>SERE Qualification is a hallmark achievement toward the TACGRU/JSOC element, and demonstrates the discipline, adaptability, and resilience expected from a special operator.</p>
+      <h4>QUALIFICATION INCLUDES</h4>
+      <ul class="qual-list">
+        <li>Survival &amp; Fieldcraft</li>
+        <li>Evasion Techniques</li>
+        <li>Resistance Principles</li>
+        <li>Land Navigation</li>
+        <li>Environmental Awareness</li>
+        <li>Stress &amp; Decision Making</li>
+        <li>Communications &amp; Reporting</li>
+        <li>Team‑Based SERE Scenarios</li>
+        <li>Final Field Evaluation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DEPLOYMENT ================= -->
+<section class="wrap" style="padding:110px 0;">
+  <div class="band-head">
+    <div>
+      <span class="label">MISSION SETTINGS</span>
+      <h2>VARIATIVE DEPLOYMENT</h2>
+    </div>
+  </div>
+  <div class="deploy-grid">
+    <article class="deploy-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M8 52 L20 30 L30 40 L40 20 L56 52 Z"/></svg></div>
+      <div class="yr">1994 MOGADISHU</div>
+      <h4>Urban Direct Action</h4>
+    </article>
+    <article class="deploy-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M8 50 Q24 30 32 50 Q40 30 56 50"/><circle cx="32" cy="18" r="6"/></svg></div>
+      <div class="yr">2026 CONGO</div>
+      <h4>Jungle Operations</h4>
+    </article>
+    <article class="deploy-card">
+      <div class="art-panel"><svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2"><path d="M12 52 L52 52 M20 52 C20 40 26 34 32 34 C38 34 44 40 44 52"/></svg></div>
+      <div class="yr">1960 VIETNAM</div>
+      <h4>Long‑Range Reconnaissance</h4>
+    </article>
+  </div>
+</section>
+
+<!-- ================= MENTOR ================= -->
+<section class="band" id="mentor">
+  <div class="wrap mentor">
+    <div>
+      <span class="label">FEATURED CREATOR</span>
+      <h2>REAL MENTOR, GWOT VETERAN</h2>
+      <div class="role">JD_LONEWOLF88 — GWOT VETERAN · SERE INSTRUCTOR · FORMER USDS AGENT</div>
+      <p>Experience beyond the simulation. A GWOT veteran with operational experience in Algeria, JD_Lonewolf88 brings firsthand knowledge of military operations, survival, and fieldcraft into the TACGRU training environment.</p>
+      <p>His background involves service during the Global War on Terror, experience as a USDS instructor, and continued work as an instructor. His experience and guidance form the backbone of TACGRU's SERE Qualification Program, helping operators develop the discipline, adaptability, and fieldcraft required to operate when conditions become unpredictable.</p>
+      <div class="mentor-ctas">
+        <a class="btn solid" href="https://www.youtube.com/@Station1023" target="_blank" rel="noopener">Subscribe — Station 1023</a>
+        <a class="btn" href="https://discord.gg/FVXKHNH2b" target="_blank" rel="noopener">Join the Discord</a>
+      </div>
+    </div>
+    <div class="art">
+      <div class="art-panel">
+        <div class="corner tl"></div><div class="corner br"></div>
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke-width="1.2">
+          <circle cx="32" cy="18" r="8"/>
+          <path d="M16 54 L18 34 L12 30 L18 22 L46 22 L52 30 L46 34 L48 54 Z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PARTNERS ================= -->
+<section class="wrap partners" id="partners">
+  <span class="label">SUPPORTED BY</span>
+  <h2>OUR PARTNER</h2>
+  <div class="partner-grid">
+    <div class="partner-item">
+      <div class="partner-mark">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+      <div>
+        <h4 style="font-family:'Anton'; font-size:15px;">PROJECT ARGUS</h4>
+        <span>Powered by · KO2:1</span>
+      </div>
+    </div>
+    <div class="partner-item">
+      <div class="partner-mark">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 3 L20 7 V13 C20 18 16 21 12 22 C8 21 4 18 4 13 V7 Z"/></svg>
+      </div>
+      <div>
+        <h4 style="font-family:'Anton'; font-size:15px;">ARI</h4>
+        <span>In affiliation with · Arma Reforger Indonesia</span>
+      </div>
+    </div>
+    <div class="partner-item">
+      <div class="partner-mark">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 4 L16 10 L12 20 L8 10 Z"/></svg>
+      </div>
+      <div>
+        <h4 style="font-family:'Anton'; font-size:15px;">DECO AI</h4>
+        <span>AI supported by</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <a href="#top" class="brand">
+          <svg width="26" height="26" viewBox="0 0 30 30" fill="none" stroke="#a8481f" stroke-width="1.4"><path d="M15 2 L27 7 V15 C27 22 21 27 15 28 C9 27 3 22 3 15 V7 Z"/></svg>
+          <span>TACGRU</span>
+        </a>
+        <p>Tactical Combat Application Group — an Indonesian‑based Tier 1 &amp; Tier 2‑inspired milsim community operating within Arma Reforger.</p>
+      </div>
+      <div class="foot-links">
+        <a class="btn solid" href="https://discord.gg/FVXKHNH2b" target="_blank" rel="noopener">Discord</a>
+        <a class="btn" href="https://www.youtube.com/@Station1023" target="_blank" rel="noopener">YouTube — Station 1023</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 TACGRU — TACTICAL COMBAT APPLICATION GROUP</span>
+      <span>ARMA REFORGER MILSIM · INDONESIA</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const header = document.getElementById('siteHeader');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  const burger = document.getElementById('burger');
+  const navLinks = document.querySelector('nav.links');
+  burger.addEventListener('click', () => {
+    const open = navLinks.style.display === 'flex';
+    navLinks.style.display = open ? 'none' : 'flex';
+    navLinks.style.cssText += open
+      ? ''
+      : 'position:fixed; top:64px; left:0; right:0; background:#0a0c09; flex-direction:column; padding:24px 32px; border-bottom:1px solid rgba(236,234,224,0.12);';
+  });
+</script>
+</body>
+</html>
